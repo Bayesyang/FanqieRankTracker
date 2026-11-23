@@ -1,4 +1,11 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    let channel;
+    try {
+        channel = await window.RankChannels.init();
+    } catch (error) {
+        document.getElementById('books-waterfall').textContent = '频道配置加载失败，请刷新重试。';
+        return;
+    }
     const categoryList = document.getElementById('category-list');
     const waterfall = document.getElementById('books-waterfall');
     const updateDate = document.getElementById('update-date');
@@ -170,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ========== Load dates index, then load latest ==========
-    fetch(`data/dates.json?${cacheBuster}`)
+    fetch(`${channel.dataPath('dates.json')}?${cacheBuster}`)
         .then(r => r.ok ? r.json() : Promise.reject('No dates.json'))
         .then(idx => {
             availableDates = idx.dates || [];
@@ -189,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
     function loadLatestData() {
-        return fetch(`data/latest_ranks.json?${cacheBuster}`)
+        return fetch(`${channel.dataPath('latest_ranks.json')}?${cacheBuster}`)
             .then(r => {
                 if (!r.ok) throw new Error('Network error');
                 return r.json();
@@ -209,13 +216,18 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch(err => {
                 console.error(err);
-                waterfall.innerHTML = '<p style="color:#f87171;padding:20px;">数据加载失败，请刷新重试。</p>';
+                updateDate.textContent = `${channel.label}暂无可用数据`;
+                dateDisplay.textContent = '暂无数据';
+                categoryList.replaceChildren();
+                datePrevBtn.disabled = true;
+                dateNextBtn.disabled = true;
+                datePickerBtn.disabled = true;
+                presetBtns.forEach(button => { button.disabled = true; });
+                waterfall.textContent = `${channel.label}榜单尚未生成或读取失败。请先运行该频道的采集和构建任务，或稍后刷新重试。`;
             });
     }
 
     function loadDateData(dateStr) {
-        // dateStr = "YYYY-MM-DD", file = fanqie_female_new_ranks_YYYYMMDD.json
-        const fileDateStr = dateStr.replace(/-/g, '');
         const isLatest = currentDateIndex === availableDates.length - 1;
 
         if (isLatest) {
@@ -227,8 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show loading state
         waterfall.innerHTML = '<p style="color:var(--text-muted);padding:20px;">加载中...</p>';
 
-        const snapshotUrl = `data/fanqie_female_new_ranks_${fileDateStr}.json?${cacheBuster}`;
-        const trendUrl = `data/trends/${dateStr}.json?${cacheBuster}`;
+        const snapshotUrl = `${channel.snapshotPath(dateStr)}?${cacheBuster}`;
+        const trendUrl = `${channel.dataPath(`trends/${dateStr}.json`)}?${cacheBuster}`;
 
         // Load snapshot + trends in parallel
         Promise.all([
@@ -448,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const rank = index + 1;
             const card = document.createElement('a');
             const bookId = extractBookId(book.url);
-            card.href = bookId ? `book.html?id=${encodeURIComponent(bookId)}` : 'javascript:void(0)';
+            card.href = bookId ? channel.url(`book.html?id=${encodeURIComponent(bookId)}`) : '#';
             card.rel = 'noopener';
             card.className = 'book-card';
 

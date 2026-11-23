@@ -2,7 +2,7 @@
 
 [![中文](https://img.shields.io/badge/lang-中文-red)](README.md)
 
-> 👗 Focused exclusively on **Fanqie Novel's Female Category (女频)**, featuring daily automated tracking of new book rankings and AI-powered trend analysis, deployed as a premium online dashboard.
+> Daily tracking of **both male (男频) and female (女频) new-book rankings**, with independent snapshots, trend analysis and AI summaries. Switch channels on the dashboard, trend and book detail pages.
 
 ---
 
@@ -10,7 +10,8 @@
 
 | Feature | Description |
 |---------|-------------|
-| 🕷️ Auto Scraping | Daily automated scraping of Top 30 new books across all sub-categories within Fanqie's Female section |
+| 🕷️ Auto Scraping | Daily scraping of both channels, up to 30 books per category (depending on page loading) |
+| 🔀 Channel Switching | Separate data and analysis for each channel; existing female history and API paths remain compatible |
 | 📊 Trend Analysis | Automatic day-over-day comparison: new entries / dropped / rank changes / readership growth |
 | 🤖 AI Summary | OpenAI-compatible API integration for per-category market trend analysis |
 | 🖥️ Dashboard | Dark editorial-style dashboard with typewriter animation and waterfall book cards |
@@ -35,9 +36,8 @@ Click the **Fork** button on the top-right corner of the GitHub page to fork thi
 ### Step 2: Enable GitHub Pages
 
 1. Go to your forked repo → **Settings** → **Pages**
-2. Under Source, select **Deploy from a branch**
-3. Select `main` branch and `/ (root)` directory
-4. Click **Save**
+2. Under Source, select **GitHub Actions** (the workflows deploy Pages artifacts)
+3. Enable workflows in the **Actions** tab after forking; retain the `main` branch
 
 After a few minutes, your dashboard will be live at: `https://<your-username>.github.io/FanqieRankTracker/`
 
@@ -56,14 +56,16 @@ Go to repo → **Settings** → **Secrets and variables** → **Actions** → **
 ### Step 4: Trigger the First Run Manually
 
 1. Go to repo → **Actions** → Select **Daily Fanqie Rank Scraper** on the left
-2. Click **Run workflow** → **Run workflow** on the top-right
-3. Wait for the workflow to complete (~3–5 minutes)
+2. Click **Run workflow**, selecting `channel=all` for both channels, or `male` / `female`
+3. Wait for scraping, data generation and deployment to complete
 
 After a successful run, data files will be generated in the `data/` directory. Open the GitHub Pages link to view your dashboard.
 
 ### Step 5: Sit Back and Relax
 
-GitHub Actions is configured to run automatically at **UTC 00:00 (08:00 Beijing Time)** every day. No further manual action is needed — data and dashboard will auto-update daily.
+GitHub Actions is configured to scrape both channels at **UTC 00:00 (08:00 Beijing Time)** every day (actual start may be delayed). Re-runs resume completed categories; the Force Update workflow can re-scrape today's selected channel(s).
+
+Use `?channel=male` or `?channel=female`; legacy links default to female. Until the first male scrape/build, the male pages show an empty state, never female fallback data. Trend comparisons require at least two snapshots per channel.
 
 ---
 
@@ -82,20 +84,27 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 playwright install chromium
 
-# 4. Run the scraper (Top 30 per category)
-python scrape_fanqie_ranks.py
+# 4. Scrape both channels (or use --channel male / female)
+python scrape_fanqie_ranks.py --channel all
 
 # 5. Build dashboard data (optional, set env vars for AI analysis)
 pip install openai
 export API_BASE_URL="https://your-api-endpoint/v1"
 export API_KEY="your-api-key"
 export API_MODEL="your-model-name"
-python scripts/build_latest.py
+python scripts/build_latest.py --channel all
 
 # 6. Preview frontend locally
 python -m http.server 8000
 # Then open http://localhost:8000
+# Male channel: http://localhost:8000/?channel=male
 ```
+
+Both local and Actions runs use Playwright Chromium; no separate Google Chrome installation is needed. Scraper `--force` ignores today's checkpoints; builder `--force` regenerates AI summaries. Historical dates can only be rebuilt from existing snapshots, not re-scraped.
+
+Female snapshots, trends and indexes keep their original `data/` paths, and APIs remain at `api/lastest*`. Male data lives under `data/male/`, with APIs at `api/male/lastest.json` and `api/male/lastest/all.json` (plus per-category files). Both Python and the frontend share routes, genre groups and keywords from `channels.json`.
+
+Short-story recommendations use an external Cloudflare Worker configured in `shorts.html`; its source is not included in this repository and it is not required by the ranking dashboard.
 
 ---
 
@@ -166,7 +175,7 @@ Yes! The system will automatically fall back to rule-based summaries (e.g., "3 n
 <details>
 <summary><b>Q: Can I track other rankings (e.g., male-oriented)?</b></summary>
 
-Yes, modify the `init_url` variable in `scrape_fanqie_ranks.py` to point to the desired ranking page URL.
+Male rankings are built in: select the channel on the dashboard or use `--channel male`. Additional ranking types require matching entry URLs and route filters, isolated data/API directories, snapshot prefixes and genre groups; changing only the entry URL is not sufficient.
 
 </details>
 

@@ -196,6 +196,38 @@ input:focus-visible {
     font-weight: 650;
 }
 
+.channel-switch {
+    display: inline-flex;
+    flex-shrink: 0;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--surface-soft);
+}
+
+.sidebar-header .channel-switch {
+    margin-top: 12px;
+}
+
+.channel-switch a {
+    padding: 5px 16px;
+    border-radius: var(--radius-pill);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 650;
+}
+
+.channel-switch a[aria-current="page"] {
+    color: var(--accent-on);
+    background: var(--accent);
+}
+
+.channel-switch a:hover:not([aria-current]) {
+    background: var(--accent-wash);
+}
+
 .update-date {
     display: inline-flex;
     margin-top: 10px;
@@ -888,6 +920,7 @@ input:focus-visible {
 .book-topbar {
     margin-bottom: 16px;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
@@ -1042,12 +1075,14 @@ input:focus-visible {
 }
 
 .book-detail-grid {
+    min-width: 0;
     display: grid;
     grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
     gap: 16px;
 }
 
 .detail-panel {
+    min-width: 0;
     padding: 18px;
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);

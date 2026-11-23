@@ -1,8 +1,11 @@
 import os
 import json
 import time
-from datetime import datetime
+import argparse
+from datetime import datetime, timezone
+from urllib.parse import urljoin
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, sync_playwright
+from rank_config import BASE_DIR, CHANNELS, channel_categories, get_channel, selected_channels
 
 START_CODE = 58344  # 0xE3E8
 CHAR_SEQUENCE = [
@@ -24,8 +27,6 @@ def decode_text(text: str) -> str:
 
 # 我们将直接从页面解析所有新书榜类别目录，实现动态抓取
 
-OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-
 def open_rank_page(page, url):
     for attempt in range(3):
         try:
@@ -38,16 +39,21 @@ def open_rank_page(page, url):
             print(f"榜单首页加载超时，5 秒后重试 ({attempt + 1}/3)")
             time.sleep(5)
 
-def run_scraper(limit=30, sleep_sec=5):
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    date_str = datetime.now().strftime("%Y%m%d")
-    output_file = os.path.join(OUTPUT_DIR, f"fanqie_female_new_ranks_{date_str}.json")
-    state_file = os.path.join(OUTPUT_DIR, f"task_state_{date_str}.json")
+def run_scraper(limit=30, sleep_sec=5, channel="female", force=False):
+    if limit < 1:
+        raise ValueError("limit 必须大于 0")
+    config = get_channel(channel)
+    output_dir = str(BASE_DIR / config["data_dir"])
+    os.makedirs(output_dir, exist_ok=True)
+    today = datetime.now(timezone.utc)
+    date_str = today.strftime("%Y%m%d")
+    output_file = os.path.join(output_dir, f"{config['snapshot_prefix']}{date_str}.json")
+    state_file = os.path.join(output_dir, f"task_state_{date_str}.json")
     
     # ------------- 状态恢复逻辑 -------------
     completed_cats = []
     all_categories = []  # 收集所有分类数据
-    if os.path.exists(state_file):
+    if not force and os.path.exists(state_file):
         with open(state_file, "r", encoding="utf-8") as f:
             try:
                 state = json.load(f)
@@ -55,20 +61,21 @@ def run_scraper(limit=30, sleep_sec=5):
             except:
                 pass
     # 如果有中断恢复的数据，先加载已有的 JSON
-    if os.path.exists(output_file) and len(completed_cats) > 0:
+    if not force and os.path.exists(output_file):
         with open(output_file, "r", encoding="utf-8") as f:
             try:
                 existing = json.load(f)
                 all_categories = existing.get("categories", [])
             except:
                 pass
+    # 只恢复实际有书籍的类别，空数据不能视为采集成功。
+    valid_names = {cat["name"] for cat in all_categories if cat.get("books")}
+    completed_cats = [name for name in completed_cats if name in valid_names]
+    failed_cats = []
     # ----------------------------------------
     
     with sync_playwright() as p:
-        if os.environ.get("GITHUB_ACTIONS"):
-            browser = p.chromium.launch(headless=True)
-        else:
-            browser = p.chromium.launch(headless=True, channel="chrome")
+        browser = p.chromium.launch(headless=True)
         # Create a new context with a normal user agent
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -76,7 +83,7 @@ def run_scraper(limit=30, sleep_sec=5):
         page = context.new_page()
         
         # 先访问新书榜的基准前缀页面，以此为入口模拟人工作业
-        init_url = "https://fanqienovel.com/rank/0_1_1139"
+        init_url = config["entry_url"]
         print(f"[{datetime.now().strftime('%H:%M:%S')}] 正在初始化并访问基础榜单页：{init_url}")
         open_rank_page(page, init_url)
         
@@ -84,15 +91,20 @@ def run_scraper(limit=30, sleep_sec=5):
         categories_js = """
         () => {
             return Array.from(document.querySelectorAll('a'))
-                .filter(a => a.href.includes('/rank/0_1_'))
                 .map(a => ({
                     name: a.innerText.trim(),
                     href: a.getAttribute('href')
                 }));
         }
         """
-        categories = page.evaluate(categories_js)
-        print(f"✅ 成功自适应提取到 {len(categories)} 个分类标签。开始全量模拟点击抓取下级数据...")
+        categories = channel_categories(page.evaluate(categories_js), channel)
+        if not categories:
+            raise RuntimeError(f"{config['label']}未找到新书榜分类，拒绝保存空榜单")
+        category_names = {cat["name"] for cat in categories}
+        all_categories = [cat for cat in all_categories if cat["name"] in category_names]
+        completed_cats = [name for name in completed_cats if name in category_names]
+        category_order = {cat["name"]: i for i, cat in enumerate(categories)}
+        print(f"✅ 成功提取到 {len(categories)} 个{config['label']}分类，开始逐类采集...")
         
         for cat in categories:
             cat_name = cat["name"]
@@ -102,14 +114,14 @@ def run_scraper(limit=30, sleep_sec=5):
                 print(f"[{datetime.now().strftime('%H:%M:%S')}] ⏭️ 跳过今日已经完成抓取的类别：{cat_name}")
                 continue
                 
-            print(f"[{datetime.now().strftime('%H:%M:%S')}] 模拟点击执行类别切换 -> {cat_name}")
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] 切换类别 -> {cat_name}")
             try:
-                # 使用 Playwright 模拟真实的人为鼠标定位与点击跳转分类
-                page.locator(f"a[href='{cat_href}']").click()
-                time.sleep(2) # 等待 SPA 页面骨架和组件请求的动画渲染完毕
-                page.wait_for_selector('a[href^="/page/"]', timeout=5000)
+                # 整页导航，避免 SPA 切换失败后把上一类别的数据写入当前类别。
+                open_rank_page(page, urljoin(init_url, cat_href))
             except Exception as e:
                 print(f"切换分类出错或加载超时 {cat_name}: {e}")
+                failed_cats.append(cat_name)
+                continue
             
             # Scroll to load top ~30 books
             for _ in range(3):
@@ -193,6 +205,10 @@ def run_scraper(limit=30, sleep_sec=5):
             except Exception as e:
                 print(f"执行JS抽取失败 {cat_name}: {e}")
                 books_data = []
+            if not books_data:
+                failed_cats.append(cat_name)
+                print(f"⚠️ {cat_name} 没有有效书籍，不标记为完成，待下次重试")
+                continue
             
             category_books = []
             for b in books_data[:limit]:
@@ -220,10 +236,11 @@ def run_scraper(limit=30, sleep_sec=5):
                     "reads": cleaned_r,
                     "intro": i,
                     "cover": c,
-                    "url": "https://fanqienovel.com" + b.get("url", "")
+                    "url": urljoin(init_url, b.get("url", ""))
                 })
             
             # 收集分类数据到内存，并增量写入 JSON
+            all_categories = [cat for cat in all_categories if cat["name"] != cat_name]
             all_categories.append({
                 "name": cat_name,
                 "books": category_books
@@ -231,8 +248,10 @@ def run_scraper(limit=30, sleep_sec=5):
             
             # 每完成一个分类就写入 JSON（防止中断丢数据）
             snapshot = {
-                "date": datetime.now().strftime('%Y-%m-%d'),
-                "categories": all_categories
+                "date": today.strftime('%Y-%m-%d'),
+                "channel": channel,
+                "complete": False,
+                "categories": sorted(all_categories, key=lambda cat: category_order[cat["name"]])
             }
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(snapshot, f, ensure_ascii=False, indent=2)
@@ -248,9 +267,32 @@ def run_scraper(limit=30, sleep_sec=5):
             time.sleep(sleep_sec)
         
         browser.close()
+
+    if failed_cats:
+        raise RuntimeError(f"{config['label']}部分分类采集失败，可重跑续传: {', '.join(failed_cats)}")
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump({
+            "date": today.strftime('%Y-%m-%d'),
+            "channel": channel,
+            "complete": True,
+            "categories": sorted(all_categories, key=lambda cat: category_order[cat["name"]]),
+        }, f, ensure_ascii=False, indent=2)
         
     print(f"\n✅ 当日选定类目任务已完毕或刷新！数据源：{output_file}")
 
 if __name__ == "__main__":
-    print("开始执行番茄女频新书榜抓取计划...")
-    run_scraper(limit=30, sleep_sec=5)
+    parser = argparse.ArgumentParser(description="抓取番茄男女频新书榜")
+    parser.add_argument("--channel", choices=["all", *CHANNELS], default="all")
+    parser.add_argument("--force", action="store_true", help="忽略当天进度，重新采集")
+    parser.add_argument("--limit", type=int, default=30)
+    args = parser.parse_args()
+    failures = []
+    for channel in selected_channels(args.channel):
+        try:
+            print(f"开始执行番茄{get_channel(channel)['label']}新书榜抓取计划...")
+            run_scraper(limit=args.limit, sleep_sec=5, channel=channel, force=args.force)
+        except Exception as exc:
+            print(f"❌ {channel}: {exc}")
+            failures.append(channel)
+    if failures:
+        raise SystemExit(f"采集未全部完成: {', '.join(failures)}")

@@ -12,6 +12,11 @@ concurrency:
 on:
   workflow_dispatch:
     inputs:
+      channel:
+        description: '更新频道'
+        type: choice
+        options: [all, female, male]
+        default: all
       target_date:
         description: '目标日期 (YYYYMMDD)，默认当天'
         required: false
@@ -21,6 +26,9 @@ on:
 jobs:
   force-update:
     runs-on: ubuntu-22.04
+    env:
+      RANK_CHANNEL: ${{ inputs.channel || 'all' }}
+      TARGET_DATE_INPUT: ${{ inputs.target_date }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -39,24 +47,18 @@ jobs:
     - name: Determine target date
       id: date
       run: |
-        INPUT="${{ github.event.inputs.target_date }}"
-        if [ -z "$INPUT" ]; then
-          TARGET=$(date -u +"%Y%m%d")
-        else
-          TARGET="$INPUT"
-        fi
-        echo "target=$TARGET" >> $GITHUB_OUTPUT
-        # 判断是否是今天
-        TODAY=$(date -u +"%Y%m%d")
-        if [ "$TARGET" = "$TODAY" ]; then
-          echo "is_today=true" >> $GITHUB_OUTPUT
-        else
-          echo "is_today=false" >> $GITHUB_OUTPUT
-        fi
-        # 转换为 YYYY-MM-DD 格式
-        DASH_DATE="${TARGET:0:4}-${TARGET:4:2}-${TARGET:6:2}"
-        echo "dash_date=$DASH_DATE" >> $GITHUB_OUTPUT
-        echo "📅 目标日期: $DASH_DATE (is_today=$( [ "$TARGET" = "$TODAY" ] && echo true || echo false ))"
+        python - <<'PY'
+        import os
+        from datetime import datetime, timezone
+        today = datetime.now(timezone.utc).strftime('%Y%m%d')
+        target = os.environ.get('TARGET_DATE_INPUT', '').strip() or today
+        if len(target) != 8 or not target.isdigit():
+            raise ValueError('目标日期必须为 YYYYMMDD')
+        date = datetime.strptime(target, '%Y%m%d')
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+            output.write(f"target={target}\nis_today={str(target == today).lower()}\ndash_date={date:%Y-%m-%d}\n")
+        print(f'目标日期: {date:%Y-%m-%d}')
+        PY
 
     - name: Set up Python
       uses: actions/setup-python@v6
@@ -74,12 +76,10 @@ jobs:
 
     - name: Run Scraper (仅当天)
       if: steps.date.outputs.is_today == 'true'
-      run: python scrape_fanqie_ranks.py
-      env:
-        GITHUB_ACTIONS: true
+      run: python scrape_fanqie_ranks.py --channel "$RANK_CHANNEL" --force
 
     - name: Build Latest Data with AI Summary (Force)
-      run: pip install openai && python scripts/build_latest.py --force --date ${{ steps.date.outputs.dash_date }}
+      run: pip install openai && python scripts/build_latest.py --channel "$RANK_CHANNEL" --force --date ${{ steps.date.outputs.dash_date }}
       env:
         API_BASE_URL: ${{ secrets.API_BASE_URL }}
         API_KEY: ${{ secrets.API_KEY }}
@@ -92,7 +92,7 @@ jobs:
       uses: stefanzweifel/git-auto-commit-action@v7
       with:
         commit_message: "[Force] Re-summarize Fanqie ranks (${{ steps.date.outputs.dash_date }})"
-        file_pattern: data/*
+        file_pattern: data api
         branch: main
 
     # ---- Deploy to GitHub Pages ----

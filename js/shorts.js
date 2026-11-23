@@ -1,4 +1,6 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // 短篇推荐流本身不分榜单频道，但返回榜单时保留用户选择。
+    await window.RankChannels.init().catch(error => console.error(error));
     const shortTags = [
         '爽文', '打脸逆袭', '现代', '男生生活', '婚姻家庭', '女生生活', '虐文', '现实情感', '救赎',
         '玄幻仙侠', '霸总', '职场', '先虐后甜', '追妻火葬场', '现言甜宠', '励志', '系统', '校园',

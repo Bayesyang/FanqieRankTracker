@@ -1,5 +1,12 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const detail = document.getElementById('book-detail');
+    let channel;
+    try {
+        channel = await window.RankChannels.init();
+    } catch (error) {
+        detail.textContent = '频道配置加载失败，请刷新重试。';
+        return;
+    }
     const cacheBuster = `v=${Math.floor(Date.now() / 600000)}`;
     const maxDays = 30;
     const copyToast = document.createElement('div');
@@ -20,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const dateIndex = await fetchJson(`data/dates.json?${cacheBuster}`);
+            const dateIndex = await fetchJson(`${channel.dataPath('dates.json')}?${cacheBuster}`);
             const dates = (dateIndex.dates || []).slice().sort().slice(-maxDays);
             const snapshots = await Promise.all(
                 dates.map(date => fetchJson(`${snapshotUrl(date)}?${cacheBuster}`).catch(() => null))
@@ -28,19 +35,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const records = collectBookRecords(bookId, bookTitle, dates, snapshots);
 
             if (!records.length) {
-                renderEmpty('最近 30 天榜单中没有找到这本书。');
+                renderEmpty(`最近 30 个观察日的${channel.label}榜单中没有找到这本书。`);
                 return;
             }
 
             renderBook(records);
         } catch (err) {
             console.error(err);
-            renderEmpty('作品详情加载失败，请稍后刷新重试。');
+            renderEmpty(`${channel.label}作品数据尚未生成或读取失败，请稍后刷新重试。`);
         }
     }
 
     function snapshotUrl(date) {
-        return `data/fanqie_female_new_ranks_${date.replace(/-/g, '')}.json`;
+        return channel.snapshotPath(date);
     }
 
     function fetchJson(url) {
@@ -85,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${book.cover ? `<img src="${book.cover}" alt="${escapeAttr(book.title)}">` : '<div class="no-cover">暂无封面</div>'}
                 </div>
                 <div class="detail-main">
-                    <span class="panel-kicker">${escapeHtml(latest.category)} · 第 ${latest.rank} 名</span>
+                    <span class="panel-kicker">${channel.label} · ${escapeHtml(latest.category)} · 第 ${latest.rank} 名</span>
                     <h1>${escapeHtml(book.title)}</h1>
                     <p class="detail-author">作者：${escapeHtml(book.author || '未知')}</p>
                     <div class="detail-stats">
