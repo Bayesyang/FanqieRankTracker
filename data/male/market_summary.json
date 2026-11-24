@@ -1,7 +1,7 @@
 {
   "channel": "male",
-  "date": "2026-11-23",
-  "prev_date": "",
+  "date": "2026-11-24",
+  "prev_date": "2026-11-23",
   "periods": {
     "7": {
       "period": "近 7 日",
@@ -10,7 +10,78 @@
       "fallback_summary": "近 7 日暂无足够数据判断全站热点。",
       "hot_genres": [],
       "hot_types": [],
-      "hot_themes": []
+      "hot_themes": [
+        {
+          "name": "穿越",
+          "count": 4,
+          "category_count": 4
+        },
+        {
+          "name": "重生",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "系统",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "金手指",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "诡异",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "直播",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "都市",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "日常",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "搞笑",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "末世",
+          "count": 2,
+          "category_count": 1
+        },
+        {
+          "name": "面板",
+          "count": 1,
+          "category_count": 1
+        },
+        {
+          "name": "无敌",
+          "count": 1,
+          "category_count": 1
+        },
+        {
+          "name": "升级",
+          "count": 1,
+          "category_count": 1
+        },
+        {
+          "name": "高武",
+          "count": 1,
+          "category_count": 1
+        }
+      ]
     },
     "14": {
       "period": "近 14 日",
@@ -19,7 +90,78 @@
       "fallback_summary": "近 14 日暂无足够数据判断全站热点。",
       "hot_genres": [],
       "hot_types": [],
-      "hot_themes": []
+      "hot_themes": [
+        {
+          "name": "穿越",
+          "count": 4,
+          "category_count": 4
+        },
+        {
+          "name": "重生",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "系统",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "金手指",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "诡异",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "直播",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "都市",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "日常",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "搞笑",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "末世",
+          "count": 2,
+          "category_count": 1
+        },
+        {
+          "name": "面板",
+          "count": 1,
+          "category_count": 1
+        },
+        {
+          "name": "无敌",
+          "count": 1,
+          "category_count": 1
+        },
+        {
+          "name": "升级",
+          "count": 1,
+          "category_count": 1
+        },
+        {
+          "name": "高武",
+          "count": 1,
+          "category_count": 1
+        }
+      ]
     },
     "30": {
       "period": "近 30 日",
@@ -28,7 +170,78 @@
       "fallback_summary": "近 30 日暂无足够数据判断全站热点。",
       "hot_genres": [],
       "hot_types": [],
-      "hot_themes": []
+      "hot_themes": [
+        {
+          "name": "穿越",
+          "count": 4,
+          "category_count": 4
+        },
+        {
+          "name": "重生",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "系统",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "金手指",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "诡异",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "直播",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "都市",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "日常",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "搞笑",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "末世",
+          "count": 2,
+          "category_count": 1
+        },
+        {
+          "name": "面板",
+          "count": 1,
+          "category_count": 1
+        },
+        {
+          "name": "无敌",
+          "count": 1,
+          "category_count": 1
+        },
+        {
+          "name": "升级",
+          "count": 1,
+          "category_count": 1
+        },
+        {
+          "name": "高武",
+          "count": 1,
+          "category_count": 1
+        }
+      ]
     },
     "all": {
       "period": "全部样本",
@@ -37,7 +250,78 @@
       "fallback_summary": "全部样本暂无足够数据判断全站热点。",
       "hot_genres": [],
       "hot_types": [],
-      "hot_themes": []
+      "hot_themes": [
+        {
+          "name": "穿越",
+          "count": 4,
+          "category_count": 4
+        },
+        {
+          "name": "重生",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "系统",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "金手指",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "诡异",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "直播",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "都市",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "日常",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "搞笑",
+          "count": 2,
+          "category_count": 2
+        },
+        {
+          "name": "末世",
+          "count": 2,
+          "category_count": 1
+        },
+        {
+          "name": "面板",
+          "count": 1,
+          "category_count": 1
+        },
+        {
+          "name": "无敌",
+          "count": 1,
+          "category_count": 1
+        },
+        {
+          "name": "升级",
+          "count": 1,
+          "category_count": 1
+        },
+        {
+          "name": "高武",
+          "count": 1,
+          "category_count": 1
+        }
+      ]
     }
   }
 }
